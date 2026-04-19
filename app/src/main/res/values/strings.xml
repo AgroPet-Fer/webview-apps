@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ✏️ ALTERE AQUI: nome do app que aparece no celular -->
+    <string name="app_name">Meu App</string>
+</resources>
