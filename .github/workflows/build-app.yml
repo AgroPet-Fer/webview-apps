@@ -1,0 +1,156 @@
+name: 🚀 Gerar APK e AAB
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: '📱 Nome do app (ex: AgroPet Fer)'
+        required: true
+        default: 'Meu App'
+      package_name:
+        description: '🔖 Identificador único (ex: com.agropetfer.app)'
+        required: true
+        default: 'com.seuapp.webview'
+      site_url:
+        description: '🌐 URL do site (com https://)'
+        required: true
+        default: 'https://www.seusite.com.br'
+      dominio:
+        description: '🔗 Domínio do site (ex: seusite.com.br)'
+        required: true
+        default: 'seusite.com.br'
+      versao_code:
+        description: '🔢 Número da versão (aumente a cada publicação)'
+        required: false
+        default: '1'
+      versao_nome:
+        description: '🏷️ Nome da versão (ex: 1.0.0)'
+        required: false
+        default: '1.0.0'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: 📥 Baixar código
+        uses: actions/checkout@v4
+
+      - name: ☕ Configurar Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: 🔧 Instalar Gradle 8.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.5'
+
+      - name: ✏️ Personalizar app
+        run: |
+          PACKAGE="${{ github.event.inputs.package_name }}"
+          URL="${{ github.event.inputs.site_url }}"
+          DOMINIO="${{ github.event.inputs.dominio }}"
+          APP_NAME="${{ github.event.inputs.app_name }}"
+          V_CODE="${{ github.event.inputs.versao_code }}"
+          V_NOME="${{ github.event.inputs.versao_nome }}"
+
+          find . -type f \( -name "*.gradle" -o -name "*.xml" -o -name "*.java" \) \
+            -exec sed -i \
+              -e "s|com\.seuapp\.webview|$PACKAGE|g" \
+              -e "s|https://www\.seusite\.com\.br|$URL|g" \
+              -e "s|seusite\.com\.br|$DOMINIO|g" \
+              -e "s|Meu App|$APP_NAME|g" \
+              -e "s|versionCode 1|versionCode $V_CODE|g" \
+              -e "s|versionName \"1\.0\"|versionName \"$V_NOME\"|g" \
+            {} \;
+
+          PASTA_JAVA=$(echo "$PACKAGE" | tr '.' '/')
+          mkdir -p "app/src/main/java/$PASTA_JAVA"
+          MAIN=$(find app/src/main/java -name "MainActivity.java" | head -1)
+          if [ -n "$MAIN" ]; then
+            cp "$MAIN" "app/src/main/java/$PASTA_JAVA/MainActivity.java"
+          fi
+
+      - name: 🎨 Gerar ícones
+        run: |
+          pip install Pillow -q
+          python3 - << 'PYEOF'
+from PIL import Image, ImageDraw, ImageFont
+import os
+
+sizes = {"mipmap-mdpi":48,"mipmap-hdpi":72,"mipmap-xhdpi":96,"mipmap-xxhdpi":144,"mipmap-xxxhdpi":192}
+base = "app/src/main/res"
+
+for folder, size in sizes.items():
+    path = f"{base}/{folder}"
+    os.makedirs(path, exist_ok=True)
+    for name in ["ic_launcher.png","ic_launcher_round.png"]:
+        dest = f"{path}/{name}"
+        if os.path.exists(dest): continue
+        img = Image.new("RGBA",(size,size),(25,118,210,255))
+        draw = ImageDraw.Draw(img)
+        m = size//6
+        draw.ellipse([m,m,size-m,size-m],fill=(255,255,255,255))
+        try: font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",size//3)
+        except: font = ImageFont.load_default()
+        bb = draw.textbbox((0,0),"A",font=font)
+        tw,th = bb[2]-bb[0],bb[3]-bb[1]
+        draw.text(((size-tw)//2,(size-th)//2),"A",fill=(25,118,210,255),font=font)
+        if "round" in name:
+            mask = Image.new("L",(size,size),0)
+            ImageDraw.Draw(mask).ellipse([0,0,size,size],fill=255)
+            img.putalpha(mask)
+        img.save(dest,"PNG")
+print("Icones OK")
+PYEOF
+
+      - name: 🔑 Recuperar keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/meu-keystore.jks
+
+      - name: 📦 Gerar APK
+        run: |
+          gradle assembleRelease \
+            -PKEYSTORE_FILE=meu-keystore.jks \
+            -PKEYSTORE_PASSWORD="${{ secrets.KEYSTORE_PASSWORD }}" \
+            -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}" \
+            -PKEY_PASSWORD="${{ secrets.KEY_PASSWORD }}" \
+            --no-daemon
+
+      - name: 🏪 Gerar AAB
+        run: |
+          gradle bundleRelease \
+            -PKEYSTORE_FILE=meu-keystore.jks \
+            -PKEYSTORE_PASSWORD="${{ secrets.KEYSTORE_PASSWORD }}" \
+            -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}" \
+            -PKEY_PASSWORD="${{ secrets.KEY_PASSWORD }}" \
+            --no-daemon
+
+      - name: 💾 Salvar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.app_name }}-APK
+          path: app/build/outputs/apk/release/*.apk
+          retention-days: 30
+
+      - name: 💾 Salvar AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.app_name }}-AAB-PlayStore
+          path: app/build/outputs/bundle/release/*.aab
+          retention-days: 30
+
+      - name: ✅ Resumo
+        run: |
+          echo "### 🎉 App gerado!" >> $GITHUB_STEP_SUMMARY
+          echo "| Campo | Valor |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 📱 Nome | ${{ github.event.inputs.app_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔖 Pacote | ${{ github.event.inputs.package_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🌐 Site | ${{ github.event.inputs.site_url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔢 Versão | ${{ github.event.inputs.versao_nome }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📥 Baixe os arquivos em **Artifacts** acima" >> $GITHUB_STEP_SUMMARY
