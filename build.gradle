@@ -1,0 +1,4 @@
+// Arquivo de configuração raiz do projeto - não precisa alterar
+plugins {
+    id 'com.android.application' version '8.3.0' apply false
+}
