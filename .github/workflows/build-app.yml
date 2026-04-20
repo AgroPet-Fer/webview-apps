@@ -59,6 +59,10 @@ jobs:
           MAIN=$(find app/src/main/java -name "MainActivity.java" | head -1)
           if [ -n "$MAIN" ]; then
             cp "$MAIN" "app/src/main/java/$PASTA_JAVA/MainActivity.java"
+            # Remove o arquivo original para evitar classe duplicada
+            if [ "$MAIN" != "app/src/main/java/$PASTA_JAVA/MainActivity.java" ]; then
+              rm "$MAIN"
+            fi
           fi
 
       - name: 🎨 Gerar ícones
