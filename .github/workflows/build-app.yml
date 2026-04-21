@@ -10,7 +10,7 @@ on:
       package_name:
         description: '🔖 Identificador único (ex: com.agropetfer.app)'
         required: true
-        default: 'com.seuapp.webview'
+        default: 'com.agropetfer.app'
       site_url:
         description: '🌐 URL do site (com https://)'
         required: true
@@ -19,6 +19,14 @@ on:
         description: '🔗 Domínio (ex: seusite.com.br)'
         required: true
         default: 'seusite.com.br'
+      status_bar_color:
+        description: '🎨 Cor da barra de status (hex, ex: #1976D2)'
+        required: false
+        default: '#1976D2'
+      icone_url:
+        description: '🖼️ URL do ícone do app (PNG 512x512, opcional)'
+        required: false
+        default: ''
 
 jobs:
   build:
@@ -45,30 +53,41 @@ jobs:
           URL="${{ github.event.inputs.site_url }}"
           DOMINIO="${{ github.event.inputs.dominio }}"
           APP_NAME="${{ github.event.inputs.app_name }}"
+          COR="${{ github.event.inputs.status_bar_color }}"
 
           find . -type f \( -name "*.gradle" -o -name "*.xml" -o -name "*.java" \) \
             -exec sed -i \
               -e "s|com\.seuapp\.webview|$PACKAGE|g" \
+              -e "s|com\.agropetfer\.app|$PACKAGE|g" \
               -e "s|https://www\.seusite\.com\.br|$URL|g" \
               -e "s|seusite\.com\.br|$DOMINIO|g" \
               -e "s|Meu App|$APP_NAME|g" \
             {} \;
+
+          # Atualiza a cor da barra de status
+          COR_LIMPA=$(echo "$COR" | sed 's/#//')
+          sed -i "s|colorPrimary\">#[0-9A-Fa-f]*|colorPrimary\">#$COR_LIMPA|g" \
+            app/src/main/res/values/colors.xml
+          sed -i "s|colorPrimaryDark\">#[0-9A-Fa-f]*|colorPrimaryDark\">#$COR_LIMPA|g" \
+            app/src/main/res/values/colors.xml
+          sed -i "s|colorPrimary\">#[0-9A-Fa-f]*|colorPrimary\">#$COR_LIMPA|g" \
+            app/src/main/res/values/themes.xml
 
           PASTA_JAVA=$(echo "$PACKAGE" | tr '.' '/')
           mkdir -p "app/src/main/java/$PASTA_JAVA"
           MAIN=$(find app/src/main/java -name "MainActivity.java" | head -1)
           if [ -n "$MAIN" ]; then
             cp "$MAIN" "app/src/main/java/$PASTA_JAVA/MainActivity.java"
-            # Remove o arquivo original para evitar classe duplicada
             if [ "$MAIN" != "app/src/main/java/$PASTA_JAVA/MainActivity.java" ]; then
               rm "$MAIN"
             fi
           fi
 
-      - name: 🎨 Gerar ícones
+      - name: 🖼️ Processar ícone
         run: |
           pip install Pillow -q
-          python3 gerar_icones.py
+          ICONE_URL="${{ github.event.inputs.icone_url }}"
+          python3 processar_icone.py "$ICONE_URL"
 
       - name: 🔑 Recuperar keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/meu-keystore.jks
@@ -104,3 +123,15 @@ jobs:
           name: ${{ github.event.inputs.app_name }}-AAB-PlayStore
           path: app/build/outputs/bundle/release/*.aab
           retention-days: 30
+
+      - name: ✅ Resumo
+        run: |
+          echo "### 🎉 App gerado!" >> $GITHUB_STEP_SUMMARY
+          echo "| Campo | Valor |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 📱 Nome | ${{ github.event.inputs.app_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔖 Pacote | ${{ github.event.inputs.package_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🌐 Site | ${{ github.event.inputs.site_url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🎨 Cor barra | ${{ github.event.inputs.status_bar_color }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📥 Baixe os arquivos em **Artifacts** acima" >> $GITHUB_STEP_SUMMARY
