@@ -24,9 +24,17 @@ on:
         required: false
         default: '#1976D2'
       icone_url:
-        description: '🖼️ URL do ícone do app (PNG 512x512, opcional)'
+        description: '🖼️ URL direta do ícone PNG (opcional — ou suba icone.png na raiz do repo)'
         required: false
         default: ''
+      mostrar_barra_progresso:
+        description: '⏳ Mostrar barra de progresso ao carregar?'
+        required: false
+        default: 'sim'
+        type: choice
+        options:
+          - sim
+          - nao
 
 jobs:
   build:
@@ -54,6 +62,7 @@ jobs:
           DOMINIO="${{ github.event.inputs.dominio }}"
           APP_NAME="${{ github.event.inputs.app_name }}"
           COR="${{ github.event.inputs.status_bar_color }}"
+          BARRA="${{ github.event.inputs.mostrar_barra_progresso }}"
 
           find . -type f \( -name "*.gradle" -o -name "*.xml" -o -name "*.java" \) \
             -exec sed -i \
@@ -64,15 +73,20 @@ jobs:
               -e "s|Meu App|$APP_NAME|g" \
             {} \;
 
-          # Atualiza a cor da barra de status
+          # Atualiza cor da barra de status
           COR_LIMPA=$(echo "$COR" | sed 's/#//')
-          sed -i "s|colorPrimary\">#[0-9A-Fa-f]*|colorPrimary\">#$COR_LIMPA|g" \
-            app/src/main/res/values/colors.xml
-          sed -i "s|colorPrimaryDark\">#[0-9A-Fa-f]*|colorPrimaryDark\">#$COR_LIMPA|g" \
-            app/src/main/res/values/colors.xml
-          sed -i "s|colorPrimary\">#[0-9A-Fa-f]*|colorPrimary\">#$COR_LIMPA|g" \
-            app/src/main/res/values/themes.xml
+          sed -i "s|colorPrimary\">#[0-9A-Fa-f]*|colorPrimary\">#$COR_LIMPA|g" app/src/main/res/values/colors.xml
+          sed -i "s|colorPrimaryDark\">#[0-9A-Fa-f]*|colorPrimaryDark\">#$COR_LIMPA|g" app/src/main/res/values/colors.xml
 
+          # Liga/desliga barra de progresso
+          if [ "$BARRA" = "nao" ]; then
+            sed -i "s|MOSTRAR_BARRA_PROGRESSO = true|MOSTRAR_BARRA_PROGRESSO = false|g" \
+              app/src/main/java/com/seuapp/MainActivity.java 2>/dev/null || true
+            find app/src/main/java -name "MainActivity.java" \
+              -exec sed -i "s|MOSTRAR_BARRA_PROGRESSO = true|MOSTRAR_BARRA_PROGRESSO = false|g" {} \;
+          fi
+
+          # Move MainActivity para o package correto
           PASTA_JAVA=$(echo "$PACKAGE" | tr '.' '/')
           mkdir -p "app/src/main/java/$PASTA_JAVA"
           MAIN=$(find app/src/main/java -name "MainActivity.java" | head -1)
@@ -86,8 +100,7 @@ jobs:
       - name: 🖼️ Processar ícone
         run: |
           pip install Pillow -q
-          ICONE_URL="${{ github.event.inputs.icone_url }}"
-          python3 processar_icone.py "$ICONE_URL"
+          python3 processar_icone.py "${{ github.event.inputs.icone_url }}"
 
       - name: 🔑 Recuperar keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/meu-keystore.jks
@@ -133,5 +146,6 @@ jobs:
           echo "| 🔖 Pacote | ${{ github.event.inputs.package_name }} |" >> $GITHUB_STEP_SUMMARY
           echo "| 🌐 Site | ${{ github.event.inputs.site_url }} |" >> $GITHUB_STEP_SUMMARY
           echo "| 🎨 Cor barra | ${{ github.event.inputs.status_bar_color }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| ⏳ Barra progresso | ${{ github.event.inputs.mostrar_barra_progresso }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "📥 Baixe os arquivos em **Artifacts** acima" >> $GITHUB_STEP_SUMMARY
