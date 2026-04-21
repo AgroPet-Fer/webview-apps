@@ -10,14 +10,14 @@ plugins {
 android {
     // ✏️ ALTERE AQUI: o identificador único do app (ex: com.nomeempresa.nomeapp)
     namespace "com.seuapp.webview"
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         // ✏️ ALTERE AQUI: mesmo valor do namespace acima
         applicationId "com.seuapp.webview"
 
         minSdk 24
-        targetSdk 34
+        targetSdk 35
 
         // Versão do app - aumente o versionCode a cada publicação nova
         versionCode 1
@@ -37,7 +37,7 @@ android {
     buildTypes {
         release {
             signingConfig signingConfigs.release
-            minifyEnabled false
+            minifyEnabled true
         }
         debug {
             applicationIdSuffix ".debug"
