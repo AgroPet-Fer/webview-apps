@@ -1,17 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Layout sem SwipeRefreshLayout — evita atualizar ao arrastar para baixo -->
 <FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- O WebView ocupa toda a tela -->
     <WebView
         android:id="@+id/webview"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- Barra de progresso fina no topo enquanto carrega -->
+    <!-- Barra de progresso — visibilidade controlada pelo workflow -->
     <ProgressBar
         android:id="@+id/progressBar"
         style="?android:attr/progressBarStyleHorizontal"
