@@ -1,33 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Layout da tela principal do app -->
-<!-- SwipeRefreshLayout = permite "puxar para atualizar" -->
-<androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+<!-- Layout sem SwipeRefreshLayout — evita atualizar ao arrastar para baixo -->
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/swipeRefresh"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- FrameLayout agrupa o WebView e a barra de progresso -->
-    <FrameLayout
+    <!-- O WebView ocupa toda a tela -->
+    <WebView
+        android:id="@+id/webview"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent" />
 
-        <!-- O WebView é onde o site aparece -->
-        <WebView
-            android:id="@+id/webview"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+    <!-- Barra de progresso fina no topo enquanto carrega -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:layout_gravity="top"
+        android:visibility="gone"
+        android:max="100" />
 
-        <!-- Barra de progresso que aparece enquanto a página carrega -->
-        <ProgressBar
-            android:id="@+id/progressBar"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="match_parent"
-            android:layout_height="4dp"
-            android:layout_gravity="top"
-            android:visibility="gone"
-            android:max="100" />
-
-    </FrameLayout>
-
-</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+</FrameLayout>
