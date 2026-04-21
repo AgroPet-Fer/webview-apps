@@ -20,14 +20,14 @@ import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
 
-    // ✏️ ALTERE AQUI: URL do site
     private static final String SITE_URL = "https://www.seusite.com.br";
-
-    // ✏️ ALTERE AQUI: domínios que abrem dentro do app
     private static final String[] DOMINIOS_INTERNOS = {
         "seusite.com.br",
         "www.seusite.com.br"
     };
+
+    // ✏️ true = mostra barra de progresso | false = oculta
+    private static final boolean MOSTRAR_BARRA_PROGRESSO = true;
 
     private WebView webView;
     private ProgressBar progressBar;
@@ -53,7 +53,6 @@ public class MainActivity extends AppCompatActivity {
     @SuppressLint("SetJavaScriptEnabled")
     private void configurarWebView() {
         WebSettings config = webView.getSettings();
-
         config.setJavaScriptEnabled(true);
         config.setDomStorageEnabled(true);
         config.setLoadWithOverviewMode(true);
@@ -64,10 +63,13 @@ public class MainActivity extends AppCompatActivity {
         config.setCacheMode(WebSettings.LOAD_DEFAULT);
         config.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
 
-        // Barra de progresso enquanto carrega
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onProgressChanged(WebView view, int progresso) {
+                if (!MOSTRAR_BARRA_PROGRESSO) {
+                    progressBar.setVisibility(View.GONE);
+                    return;
+                }
                 if (progresso < 100) {
                     progressBar.setVisibility(View.VISIBLE);
                     progressBar.setProgress(progresso);
@@ -77,28 +79,19 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Controla quais links abrem dentro ou fora do app
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
-
                 for (String dominio : DOMINIOS_INTERNOS) {
-                    if (url.contains(dominio)) {
-                        return false; // abre dentro do app
-                    }
+                    if (url.contains(dominio)) return false;
                 }
-
-                // Links especiais: email, telefone, whatsapp
                 if (url.startsWith("mailto:") || url.startsWith("tel:") ||
                     url.startsWith("whatsapp:") || url.startsWith("intent:")) {
-                    try {
-                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
-                    } catch (Exception ignored) {}
+                    try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); }
+                    catch (Exception ignored) {}
                     return true;
                 }
-
-                // Outros links abrem no navegador
                 startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
                 return true;
             }
@@ -124,7 +117,6 @@ public class MainActivity extends AppCompatActivity {
             .show();
     }
 
-    // Botão voltar: navega para página anterior
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK && webView.canGoBack()) {
@@ -134,16 +126,6 @@ public class MainActivity extends AppCompatActivity {
         return super.onKeyDown(keyCode, event);
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        webView.onPause();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        webView.onResume();
-        if (!temInternet()) mostrarErroSemInternet();
-    }
+    @Override protected void onPause()  { super.onPause();  webView.onPause();  }
+    @Override protected void onResume() { super.onResume(); webView.onResume(); if (!temInternet()) mostrarErroSemInternet(); }
 }
