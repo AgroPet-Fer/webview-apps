@@ -5,8 +5,14 @@
         <item name="colorPrimaryVariant">@color/colorPrimaryDark</item>
         <item name="colorOnPrimary">#FFFFFF</item>
         <item name="colorSecondary">#03DAC6</item>
-        <!-- Cor da barra de status (horas, notificações, bateria) -->
+
+        <!-- Cor da barra de status (horas/Wi-Fi/bateria) — SEMPRE visível -->
         <item name="android:statusBarColor">@color/colorPrimary</item>
+
+        <!-- Garante que o app NUNCA ocupe o espaço da barra de status -->
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowTranslucentStatus">false</item>
+
         <item name="android:windowBackground">#FFFFFF</item>
     </style>
 </resources>
