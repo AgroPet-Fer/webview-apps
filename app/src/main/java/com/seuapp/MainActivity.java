@@ -9,6 +9,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.Window;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -17,6 +18,7 @@ import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.WindowCompat;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -26,7 +28,8 @@ public class MainActivity extends AppCompatActivity {
         "www.seusite.com.br"
     };
 
-    // ✏️ true = mostra barra de progresso | false = oculta
+    // ✏️ true = mostra barrinha de progresso de carregamento | false = oculta
+    // Isso NÃO afeta a barra de status (horas/Wi-Fi/bateria) — ela sempre aparece
     private static final boolean MOSTRAR_BARRA_PROGRESSO = true;
 
     private WebView webView;
@@ -36,10 +39,21 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Garante que a barra de status (horas/Wi-Fi) SEMPRE aparece
+        // Independente da configuração da barra de progresso
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
+
         setContentView(R.layout.activity_main);
 
         webView     = findViewById(R.id.webview);
         progressBar = findViewById(R.id.progressBar);
+
+        // Esconde só a barrinha de progresso se o usuário optou por isso
+        // A barra de status do celular NÃO é afetada por isso
+        if (!MOSTRAR_BARRA_PROGRESSO) {
+            progressBar.setVisibility(View.GONE);
+        }
 
         configurarWebView();
 
@@ -66,10 +80,8 @@ public class MainActivity extends AppCompatActivity {
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onProgressChanged(WebView view, int progresso) {
-                if (!MOSTRAR_BARRA_PROGRESSO) {
-                    progressBar.setVisibility(View.GONE);
-                    return;
-                }
+                // Só mexe na barrinha de progresso — nunca na barra de status do celular
+                if (!MOSTRAR_BARRA_PROGRESSO) return;
                 if (progresso < 100) {
                     progressBar.setVisibility(View.VISIBLE);
                     progressBar.setProgress(progresso);
@@ -127,5 +139,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override protected void onPause()  { super.onPause();  webView.onPause();  }
-    @Override protected void onResume() { super.onResume(); webView.onResume(); if (!temInternet()) mostrarErroSemInternet(); }
+    @Override protected void onResume() {
+        super.onResume();
+        webView.onResume();
+        if (!temInternet()) mostrarErroSemInternet();
+    }
 }
